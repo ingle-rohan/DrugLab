@@ -32,13 +32,33 @@ from sqlalchemy.orm import Session, SessionTransaction, sessionmaker
 from .models import Base, TenantScopedMixin
 
 
+import os
+
+DEFAULT_NEON_DB_URL = (
+    "postgresql+psycopg://druglab_app:DrugLabApp2026x"
+    "@ep-jolly-bonus-b3ccfxu6.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+)
+
+
+def normalize_database_url(url: Optional[str]) -> str:
+    """Ensure database URL is non-empty and uses postgresql+psycopg dialect."""
+    if not url or not url.strip():
+        return DEFAULT_NEON_DB_URL
+    raw = url.strip()
+    if raw.startswith("postgres://"):
+        return "postgresql+psycopg://" + raw[len("postgres://"):]
+    if raw.startswith("postgresql://") and not raw.startswith("postgresql+"):
+        return "postgresql+psycopg://" + raw[len("postgresql://"):]
+    return raw
+
+
 # --------------------------------------------------------------------------
 # Settings
 # --------------------------------------------------------------------------
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="DRUGLAB_", env_file=".env", extra="ignore")
 
-    database_url: str = "postgresql+psycopg://druglab:druglab@localhost:5432/druglab"
+    database_url: str = DEFAULT_NEON_DB_URL
     sql_echo: bool = False
     pool_size: int = 10
     max_overflow: int = 20
@@ -48,7 +68,14 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    # Check OS environment for DRUGLAB_DATABASE_URL or DATABASE_URL
+    env_url = os.getenv("DRUGLAB_DATABASE_URL") or os.getenv("DATABASE_URL")
+    if env_url:
+        settings.database_url = normalize_database_url(env_url)
+    else:
+        settings.database_url = normalize_database_url(settings.database_url)
+    return settings
 
 
 # --------------------------------------------------------------------------
@@ -56,8 +83,9 @@ def get_settings() -> Settings:
 # --------------------------------------------------------------------------
 def build_engine(settings: Optional[Settings] = None) -> Engine:
     s = settings or get_settings()
+    db_url = normalize_database_url(s.database_url)
     return create_engine(
-        s.database_url,
+        db_url,
         echo=s.sql_echo,
         pool_size=s.pool_size,
         max_overflow=s.max_overflow,

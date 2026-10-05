@@ -6,9 +6,12 @@ services:
     region: singapore
     dockerfilePath: ./Dockerfile
     envVars:
+      - key: DRUGLAB_DATABASE_URL
+        value: postgresql+psycopg://druglab_app:DrugLabApp2026x@ep-jolly-bonus-b3ccfxu6.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
       - key: DATABASE_URL
-        value: postgresql://neondb_owner:npg_g0hZ5LSmjPqK@ep-jolly-bonus-b3ccfxu6.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+        value: postgresql+psycopg://druglab_app:DrugLabApp2026x@ep-jolly-bonus-b3ccfxu6.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
       - key: ENVIRONMENT
         value: production
       - key: EMBEDDING_MODEL
         value: druglab-vector-v1
+
